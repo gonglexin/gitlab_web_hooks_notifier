@@ -10,18 +10,18 @@ helpers do
     object_kind = event['object_kind']
     user_name = event['user_name'] || event['user']['name']
     repository = event['repository']['name']
-    message, title =
+    message, title, url =
       case object_kind
       when 'push', 'tag_push'
         target = event['ref'].split('/').last
         target_message = object_kind == 'push' ? "to branch #{target} at #{repository}" : "tag #{target} at #{repository}"
         message = "#{user_name} pushed #{target_message}"
-        [message, titleize(object_kind)]
+        [message, titleize(object_kind), nil]
       when 'issue', 'merge_request'
         action = "#{event['object_attributes']['action']}"
         object_kind_detail = "#{object_kind.split('_').join(' ')} ##{event['object_attributes']['iid']} #{event['object_attributes']['title']}"
         message = "#{user_name} #{action} #{object_kind_detail} at #{repository}"
-        [message, titleize(object_kind)]
+        [message, titleize(object_kind), "#{event['object_attributes']['url']}"]
       when 'note'
         note = event['object_attributes']['note']
         noteable_type = event['object_attributes']['noteable_type']
@@ -37,11 +37,11 @@ helpers do
             "snippet ##{event['snippet']['id']}"
           end
         title = "#{user_name} commented on #{thing} at #{repository}"
-        [note, title]
+        [note, title, "#{event['object_attributes']['url']}"]
       else
-        [event, 'Can not parse event response']
+        [event, 'Can not parse event response', nil]
       end
 
-    TerminalNotifier.notify(message, title: title)
+    TerminalNotifier.notify(message, title: title, open: url)
   end
 end
